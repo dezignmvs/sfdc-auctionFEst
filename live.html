@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Broadcast Screen - Auction</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CSS styles -->
+    <link rel="stylesheet" href="app.css">
+    <!-- Flaticon Uicons -->
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+</head>
+<body class="min-h-screen flex flex-col bg-[#f8f9fc] text-gray-900 overflow-hidden p-6 md:p-8" data-theme="light">
+    <!-- Read-only Spectator / Projector View forced to Light theme -->
+    
+    <!-- Topbar -->
+    <header class="flex justify-between items-center mb-8 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-50 border border-theme flex items-center justify-center text-[#134e8e]">
+                <i class="fi fi-rr-screen text-2xl"></i>
+            </div>
+            <div>
+                <h1 id="broadcast-auction-title" class="text-xl font-black tracking-tight leading-tight">Live Player Auction</h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[10px] font-bold text-red-500 uppercase tracking-widest flex items-center gap-1.5 bg-red-50/50 border border-red-200 px-2.5 py-0.5 rounded-full shrink-0">
+                        <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                        Live Broadcast
+                    </span>
+                    <span id="broadcast-active-section-badge" class="hidden text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider truncate">
+                        Section: <span id="broadcast-active-section-name">None</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Grid Dashboard layout -->
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch overflow-hidden">
+        
+        <!-- Left Section: Current Active Player Bidding Card -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            <div class="card-flat bg-white border-theme flex-1 flex flex-col justify-center p-8 relative">
+                
+                <div id="live-player-arena" class="space-y-8 flex flex-col justify-center h-full">
+                    <!-- Current Turn Display -->
+                    <div class="text-center space-y-3">
+                        <span class="px-3.5 py-1.5 bg-blue-50 text-[#134e8e] border border-blue-100 rounded-full text-xs font-black uppercase tracking-widest">Active Team Turn</span>
+                        <h2 id="live-leading-team" class="text-5xl md:text-6xl font-black text-gray-950 tracking-tight">None</h2>
+                    </div>
+
+                    <!-- Clock Display -->
+                    <div class="flex flex-col items-center justify-center text-center">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Time Remaining</span>
+                        <div id="live-timer" class="text-7xl font-black font-mono text-red-500 mt-1 select-none animate-pulse">--</div>
+                    </div>
+
+                    <!-- Last Selected Student Data -->
+                    <div id="last-selection-card-container" class="max-w-md mx-auto w-full">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recently Sold Ticker -->
+            <div class="card-flat bg-white border-theme py-4 px-6 shrink-0">
+                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Recently Drafted Candidates</h4>
+                <div id="sold-ticker-container" class="flex gap-4 overflow-x-auto py-1">
+                    <div class="text-xs text-gray-400">No draft picks made yet.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Section: Leaderboard -->
+        <div class="lg:col-span-4 flex flex-col">
+            <div class="card-flat bg-white border-theme flex-1 flex flex-col p-6 min-h-[400px]">
+                <h3 class="font-black text-base mb-4 shrink-0 text-gray-950">Roster Scoreboard</h3>
+                
+                <div id="leaderboard-container" class="flex-1 overflow-y-auto space-y-3.5">
+                    <!-- Dynamic team blocks -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Core JS -->
+    <script src="app.js"></script>
+
+    <!-- Spectator Script -->
+    <script>
+        let teamsData = [];
+        let candidatesData = [];
+        let auctionState = {};
+        let countdownInterval = null;
+
+        function initBroadcastSync() {
+            // 1. Sync Teams (standings)
+            db.collection('teams').onSnapshot(snap => {
+                teamsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderLeaderboard();
+            });
+
+            // 2. Sync Candidates (purchased roster tracking)
+            db.collection('candidates').onSnapshot(snap => {
+                candidatesData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderLeaderboard();
+                renderRecentlySold();
+                syncActivePlayerUI();
+            });
+
+            // 3. Sync Live State
+            db.collection('config').doc('auctionState').onSnapshot(doc => {
+                if (doc.exists) {
+                    auctionState = doc.data();
+                    syncActivePlayerUI();
+                    if (auctionState.title) {
+                        document.getElementById('broadcast-auction-title').innerText = auctionState.title;
+                    }
+                }
+            });
+        }
+
+        function renderLeaderboard() {
+            const container = document.getElementById('leaderboard-container');
+            if (!container) return;
+
+            // Compute roster stats for each team
+            const teamsWithStats = teamsData.map(team => {
+                const roster = candidatesData.filter(c => c.team === team.name && c.status === 'sold');
+                const spent = roster.reduce((sum, c) => sum + (parseInt(c.bidPrice) || 0), 0);
+                const purse = parseInt(team.purse) || 10000;
+                const remaining = purse - spent;
+
+                return {
+                    ...team,
+                    spent,
+                    remaining,
+                    rosterCount: roster.length
+                };
+            });
+
+            // Sort teams by roster count descending
+            teamsWithStats.sort((a, b) => b.rosterCount - a.rosterCount);
+
+            container.innerHTML = teamsWithStats.map(team => {
+                return `
+                    <div class="p-3.5 border border-theme bg-gray-50/50 rounded-2xl flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="w-3.5 h-3.5 rounded-full shrink-0" style="background-color: ${team.color || '#fff'}"></span>
+                            <div>
+                                <h4 class="font-bold text-sm text-gray-900">${team.name}</h4>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Roster: ${team.rosterCount}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderRecentlySold() {
+            const container = document.getElementById('sold-ticker-container');
+            if (!container) return;
+
+            const soldPlayers = candidatesData.filter(c => c.status === 'sold');
+            // Sort by updatedAt or bidPrice, let's keep recent 5
+            soldPlayers.sort((a, b) => {
+                const tA = a.updatedAt ? a.updatedAt.toDate().getTime() : 0;
+                const tB = b.updatedAt ? b.updatedAt.toDate().getTime() : 0;
+                return tB - tA; // descending
+            });
+
+            const recentSold = soldPlayers.slice(0, 5);
+
+            if (recentSold.length === 0) {
+                container.innerHTML = `<div class="text-xs text-gray-500">No players sold yet.</div>`;
+                return;
+            }
+
+            container.innerHTML = recentSold.map(cand => {
+                const teamObj = teamsData.find(t => t.name === cand.team);
+                const tColor = teamObj ? teamObj.color : '#fff';
+
+                return `
+                    <div class="p-3 border border-theme bg-gray-50/50 rounded-2xl flex items-center gap-4 shrink-0">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-xs text-gray-900 leading-tight">${cand.name}</span>
+                            <span class="text-[9px] font-semibold text-gray-500 mt-0.5 uppercase flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full inline-block" style="background-color: ${tColor}"></span>
+                                ${cand.team}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function syncActivePlayerUI() {
+            const badge = document.getElementById('broadcast-active-section-badge');
+            const nameLbl = document.getElementById('broadcast-active-section-name');
+            if (badge && nameLbl) {
+                if (auctionState.activeSection) {
+                    badge.classList.remove('hidden');
+                    nameLbl.innerText = `${auctionState.activeSection} | Set: ${auctionState.activeRoundName || 'N/A'}`;
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+
+            const activeTeam = (auctionState.turnQueue && auctionState.turnQueue.length > 0) 
+                ? auctionState.turnQueue[auctionState.currentTurnIndex || 0] 
+                : '';
+
+            document.getElementById('live-leading-team').innerText = activeTeam || 'None';
+
+            // Show Last Selection Card
+            const selectionContainer = document.getElementById('last-selection-card-container');
+            if (selectionContainer) {
+                if (auctionState.lastSelectedCandId) {
+                    const lastCand = candidatesData.find(c => c.id === auctionState.lastSelectedCandId);
+                    selectionContainer.innerHTML = `
+                        <div class="p-4 bg-green-50 border border-green-200 rounded-2xl animate-fade-in">
+                            <span class="text-[10px] font-black text-green-700 uppercase tracking-widest block">Last Selection Pick</span>
+                            <div class="flex items-center gap-3 mt-2">
+                                <div class="w-12 h-12 bg-white rounded-xl border border-green-200 flex items-center justify-center font-black text-green-800 font-mono text-sm shrink-0">
+                                    #${lastCand ? lastCand.chestNo : '--'}
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="font-black text-sm text-gray-950 truncate">${lastCand ? lastCand.name : 'Unknown Candidate'}</h4>
+                                    <p class="text-xs text-gray-500 font-bold mt-0.5">Drafted by <span class="text-blue-600 font-black">${auctionState.lastSelectedTeam || 'N/A'}</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    selectionContainer.innerHTML = `
+                        <div class="p-4 bg-gray-50 border border-theme rounded-2xl text-center text-xs text-gray-400 font-bold">
+                            No draft selections made in this set yet.
+                        </div>
+                    `;
+                }
+            }
+
+            handleCountdownClock();
+        }
+
+        function handleCountdownClock() {
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            if (!auctionState.timerEnd || auctionState.status !== 'started') {
+                document.getElementById('live-timer').innerText = "--";
+                return;
+            }
+
+            const endTime = auctionState.timerEnd.toDate().getTime();
+
+            countdownInterval = setInterval(() => {
+                const now = Date.now();
+                const diff = Math.ceil((endTime - now) / 1000);
+
+                if (diff <= 0) {
+                    clearInterval(countdownInterval);
+                    document.getElementById('live-timer').innerText = "OUT";
+                } else {
+                    document.getElementById('live-timer').innerText = diff + 's';
+                }
+            }, 1000);
+        }
+
+        // On Load Page
+        document.addEventListener('DOMContentLoaded', () => {
+            initBroadcastSync();
+            
+            // Set light theme default (Strict light theme enforcement)
+            document.documentElement.setAttribute('data-theme', 'light');
+            localStorage.setItem('auction-theme', 'light');
+        });
+    </script>
+</body>
+</html>

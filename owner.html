@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Control Panel - Auction</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CSS styles -->
+    <link rel="stylesheet" href="app.css">
+    <!-- Flaticon Uicons -->
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+    <!-- Toastify CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+</head>
+<body class="min-h-screen flex bg-[#f8f9fc]">
+    <!-- Admin Guard Check -->
+    <script>
+        if (localStorage.getItem('auction-role') !== 'owner' || localStorage.getItem('auction-isLoggedIn') !== 'true') {
+            window.location.href = 'index.html';
+        }
+    </script>
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 border-r border-theme bg-theme-sec flex flex-col shrink-0">
+        <div class="p-6 border-b border-theme flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-[#134e8e]">
+                    <i class="fi fi-rr-crown text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="font-black text-sm leading-tight">Owner Control</h2>
+                    <span class="text-[10px] uppercase font-bold text-gray-400">Admin Console</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            <button onclick="showTab('dashboard')" id="btn-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[13px] text-brand-textMuted hover:bg-gray-50 hover:text-brand-textDark font-semibold transition-all">
+                <div class="icon-wrap w-8 h-8 rounded-lg flex items-center justify-center bg-transparent text-gray-400 shrink-0 transition-all">
+                    <i class="fi fi-rr-home text-lg"></i>
+                </div>
+                <span>Dashboard</span>
+            </button>
+            <button onclick="showTab('live')" id="btn-live" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[13px] text-brand-textMuted hover:bg-gray-50 hover:text-brand-textDark font-semibold transition-all">
+                <div class="icon-wrap w-8 h-8 rounded-lg flex items-center justify-center bg-transparent text-gray-400 shrink-0 transition-all">
+                    <i class="fi fi-rr-play text-lg"></i>
+                </div>
+                <span>Live Auction</span>
+            </button>
+            <button onclick="showTab('teams')" id="btn-teams" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[13px] text-brand-textMuted hover:bg-gray-50 hover:text-brand-textDark font-semibold transition-all">
+                <div class="icon-wrap w-8 h-8 rounded-lg flex items-center justify-center bg-transparent text-gray-400 shrink-0 transition-all">
+                    <i class="fi fi-rr-users-alt text-lg"></i>
+                </div>
+                <span>Team Management</span>
+            </button>
+            <button onclick="showTab('players')" id="btn-players" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[13px] text-brand-textMuted hover:bg-gray-50 hover:text-brand-textDark font-semibold transition-all">
+                <div class="icon-wrap w-8 h-8 rounded-lg flex items-center justify-center bg-transparent text-gray-400 shrink-0 transition-all">
+                    <i class="fi fi-rr-user text-lg"></i>
+                </div>
+                <span>Player Registry</span>
+            </button>
+            <button onclick="showTab('rounds')" id="btn-rounds" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[13px] text-brand-textMuted hover:bg-gray-50 hover:text-brand-textDark font-semibold transition-all">
+                <div class="icon-wrap w-8 h-8 rounded-lg flex items-center justify-center bg-transparent text-gray-400 shrink-0 transition-all">
+                    <i class="fi fi-rr-layers text-lg"></i>
+                </div>
+                <span>Round Control</span>
+            </button>
+            <button onclick="showTab('settings')" id="btn-settings" class="nav-btn w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[13px] text-brand-textMuted hover:bg-gray-50 hover:text-brand-textDark font-semibold transition-all">
+                <div class="icon-wrap w-8 h-8 rounded-lg flex items-center justify-center bg-transparent text-gray-400 shrink-0 transition-all">
+                    <i class="fi fi-rr-settings text-lg"></i>
+                </div>
+                <span>System Settings</span>
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-theme">
+            <button onclick="logoutOwner()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-all">
+                <i class="fi fi-rr-sign-out-alt text-lg"></i>
+                <span>Log Out</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <!-- Topbar -->
+        <header class="h-16 border-b border-theme bg-theme-sec px-8 flex items-center justify-between shrink-0">
+            <h1 id="page-title" class="text-lg font-black text-gray-900 capitalize">Auction Panel</h1>
+            <div class="flex items-center gap-4">
+
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold text-gray-500">Live Status:</span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic Panels -->
+        <div class="p-8 max-w-[1400px] w-full mx-auto flex-1">
+            
+            <!-- Tab: Dashboard -->
+            <div id="tab-dashboard" class="tab-panel hidden space-y-8">
+                <!-- Stats Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="card-flat">
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Candidates</div>
+                        <div id="stats-total-players" class="text-3xl font-black">0</div>
+                    </div>
+                    <div class="card-flat">
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Candidates Drafted</div>
+                        <div id="stats-sold-players" class="text-3xl font-black text-green-500">0</div>
+                    </div>
+                    <div class="card-flat">
+                        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Remaining Pool</div>
+                        <div id="stats-unsold-players" class="text-3xl font-black text-red-500">0</div>
+                    </div>
+                </div>
+
+                <!-- Live Info Table -->
+                <div class="card-flat">
+                    <h3 class="font-bold text-base mb-4">Teams Draft Standings</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-theme text-gray-400 font-semibold text-[12px] uppercase">
+                                    <th class="py-3 px-4">Team Name</th>
+                                    <th class="py-3 px-4 text-right">Candidates Drafted</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-teams-table">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Live Auction Controller -->
+            <div id="tab-live" class="tab-panel hidden space-y-6">
+                <!-- Live Setup & Control -->
+                <!-- Session Initiator -->
+                <div class="card-flat space-y-4">
+                    <h3 class="font-black text-base">Manage Draft Session</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold text-gray-500 mb-1">Select Section</label>
+                            <select id="initiate-auction-section" class="input-flat font-bold text-sm">
+                                <option value="">Select Section</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold text-gray-500 mb-1">Select Round (Set)</label>
+                            <select id="initiate-auction-round" class="input-flat font-bold text-sm">
+                                <option value="">Select Round</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold text-gray-500 mb-1">Per-Team Selection Time (seconds)</label>
+                            <input type="number" id="initiate-auction-duration" class="input-flat font-bold text-sm font-mono" value="120">
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="startDraftSession()" class="px-5 py-3 bg-[#134e8e] text-white rounded-xl font-bold hover:bg-opacity-95 transition-all">
+                            Start Session
+                        </button>
+                        <button onclick="resetDraftSession()" class="px-5 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-opacity-95 transition-all">
+                            Reset Current Session
+                        </button>
+                    </div>
+                    
+                    <div id="active-auction-status-bar" class="hidden text-xs font-bold text-gray-500 bg-gray-50 border border-gray-100 p-4 rounded-xl flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                            <span class="font-extrabold text-gray-700">Active Session: Section <span id="lbl-active-section" class="text-blue-600">None</span> | Round <span id="lbl-active-round" class="text-blue-600">None</span></span>
+                            <button onclick="endDraftSession()" class="text-red-500 hover:text-red-700 font-bold">Stop Session</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Selection Monitor -->
+                <div class="card-flat space-y-4">
+                    <div class="flex items-center justify-between border-b border-theme pb-4">
+                        <h3 class="font-black text-base">Live Selection Monitor</h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-gray-400">Current Turn Team: <span id="lbl-current-team-turn" class="text-blue-600 underline font-black">None</span></span>
+                            <span class="text-xs font-bold text-gray-400">Time Remaining:</span>
+                            <span id="auction-timer-display" class="font-mono text-lg font-black text-red-500">--</span>
+                        </div>
+                    </div>
+                    <div id="live-monitor-description" class="text-xs text-gray-500">
+                        Session is active. The active team has selection time to choose a candidate.
+                    </div>
+                </div>
+
+                <!-- Candidate Pool Selection Monitor -->
+                <div class="card-flat space-y-4">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <h3 class="font-black text-base">Candidate Selection Pool</h3>
+                        <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                            <input type="text" id="search-live-players" oninput="renderLivePlayerSelect()" class="input-flat text-xs w-full sm:w-48" placeholder="Search candidate name...">
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto max-h-[300px]">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-theme text-gray-400 font-semibold text-[11px] uppercase">
+                                    <th class="py-2.5 px-4">Chest</th>
+                                    <th class="py-2.5 px-4">Name</th>
+                                    <th class="py-2.5 px-4">Section</th>
+                                    <th class="py-2.5 px-4 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="live-player-select-table">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Team Management -->
+            <div id="tab-teams" class="tab-panel hidden space-y-6">
+                <div class="card-flat">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-black text-base">Teams & Color Profiles</h3>
+                        <span class="text-xs text-gray-400 font-medium">To create/delete teams, use the main dashboard Teams page.</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-theme text-gray-400 font-semibold text-[12px] uppercase">
+                                    <th class="py-3 px-4">Team</th>
+                                    <th class="py-3 px-4 text-right">Color</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teams-table-body">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Player Registry -->
+            <div id="tab-players" class="tab-panel hidden space-y-6">
+                <div class="card-flat">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+                        <h3 class="font-black text-base">Player Base Prices & Category Assign</h3>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <input type="text" id="search-player-reg" oninput="renderPlayerRegUI()" class="input-flat text-xs w-full sm:w-60" placeholder="Search player name...">
+                            <select id="filter-player-section" onchange="renderPlayerRegUI()" class="input-flat text-xs font-bold">
+                                <option value="">All Sections</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-theme text-gray-400 font-semibold text-[12px] uppercase">
+                                    <th class="py-3 px-4">Chest</th>
+                                    <th class="py-3 px-4">Name</th>
+                                    <th class="py-3 px-4">Section</th>
+                                    <th class="py-3 px-4">Category</th>
+                                    <th class="py-3 px-4">Base Price</th>
+                                    <th class="py-3 px-4">Round Assignment</th>
+                                    <th class="py-3 px-4 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="players-table-body">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Round Management -->
+            <div id="tab-rounds" class="tab-panel hidden grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Left panel: Create / Manage rounds -->
+                <div class="lg:col-span-4 card-flat space-y-6">
+                    <h3 class="font-black text-base">Create Auction Round (Set Builder)</h3>
+                    <form onsubmit="saveRound(event)" class="space-y-4">
+                        <div class="flex flex-col">
+                            <label class="text-[11px] font-bold uppercase text-gray-500 tracking-wider mb-1.5">Round Name *</label>
+                            <input type="text" id="round-name" required class="input-flat" placeholder="e.g. Round A - Batsmen">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[11px] font-bold uppercase text-gray-500 tracking-wider mb-1.5">Display Order</label>
+                            <input type="number" id="round-order" class="input-flat" placeholder="e.g. 1" value="1">
+                        </div>
+                        
+                        <div class="flex flex-col space-y-2">
+                            <label class="text-[11px] font-bold uppercase text-gray-500 tracking-wider">Team Selection Sequence</label>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="setPresetOrder('ABCD')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-all">ABCD</button>
+                                <button type="button" onclick="setPresetOrder('DCBA')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-all">DCBA</button>
+                                <button type="button" onclick="setPresetOrder('Custom')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-all">Custom</button>
+                            </div>
+                            <!-- Clickable teams list for Custom order -->
+                            <div id="custom-teams-builder-pool" class="hidden flex flex-wrap gap-1.5 p-2 bg-gray-50 border border-theme rounded-xl">
+                                <!-- Clickable team buttons dynamically populated -->
+                            </div>
+                            <!-- Visual preview of sequence -->
+                            <div class="p-3 bg-gray-50 rounded-xl border border-theme min-h-[50px] flex flex-wrap items-center gap-1.5" id="sequence-preview-container">
+                                <span class="text-xs text-gray-400">Sequence is empty. Click presets or custom to add teams.</span>
+                            </div>
+                            <button type="button" onclick="clearSequenceBuilder()" class="text-right text-xs text-red-500 hover:underline font-semibold block">Clear Sequence</button>
+                        </div>
+
+                        <button type="submit" class="w-full bg-[#134e8e] text-white py-2.5 rounded-xl font-bold shadow-md hover:bg-opacity-95 transition-all">
+                            Save Round
+                        </button>
+                    </form>
+
+                    <div class="border-t border-theme pt-4">
+                        <h4 class="font-bold text-xs uppercase tracking-wider text-gray-400 mb-3">Existing Rounds</h4>
+                        <div id="rounds-list-container" class="space-y-2">
+                            <!-- Dynamic round items -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right panel: Assign players to selected round -->
+                <div class="lg:col-span-8 card-flat space-y-6">
+                    <div class="flex items-center justify-between border-b border-theme pb-4">
+                        <div>
+                            <h3 class="font-black text-base" id="assign-round-title">Round Assignment</h3>
+                            <p class="text-xs text-gray-400 mt-1">Select a round to view and assign candidates.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="assignCheckedPlayers()" class="px-4 py-2 bg-[#134e8e] text-white rounded-lg text-xs font-bold shadow-sm hover:opacity-90 transition-all">
+                                Assign Selected
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filter / Select Player Table -->
+                    <div class="flex justify-between items-center gap-4">
+                        <select id="filter-assign-section" onchange="renderAssignPlayersUI()" class="input-flat text-xs font-bold">
+                            <option value="">All Sections</option>
+                        </select>
+                        <span class="text-xs text-gray-400 font-medium" id="selected-assign-count">0 selected</span>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[400px]">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-theme text-gray-400 font-semibold text-[11px] uppercase">
+                                    <th class="py-2.5 px-4"><input type="checkbox" id="master-assign-checkbox" onclick="toggleAllAssign(this.checked)"></th>
+                                    <th class="py-2.5 px-4">Chest</th>
+                                    <th class="py-2.5 px-4">Name</th>
+                                    <th class="py-2.5 px-4">Section</th>
+                                    <th class="py-2.5 px-4">Current Round</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assign-players-table-body">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Settings -->
+            <div id="tab-settings" class="tab-panel hidden space-y-6">
+                <div class="card-flat max-w-lg">
+                    <h3 class="font-black text-base mb-6">Auction Configurations</h3>
+                    <form onsubmit="saveAuctionSettings(event)" class="space-y-4">
+                        <div class="flex flex-col">
+                            <label class="text-[11px] font-bold uppercase text-gray-500 tracking-wider mb-1.5">Auction Title</label>
+                            <input type="text" id="settings-title" required class="input-flat" placeholder="ArtFest '26 Live Player Auction">
+                        </div>
+                        <button type="submit" class="w-full bg-[#134e8e] text-white py-3 rounded-xl font-bold shadow-md hover:bg-opacity-95 transition-all">
+                            Save Configuration
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Toastify JS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <!-- Core JS -->
+    <script src="app.js"></script>
+    <!-- Owner JS Dashboard Controller -->
+    <script>
+        let currentTab = 'dashboard';
+        let teamsData = [];
+        let candidatesData = [];
+        let roundsData = [];
+        let sectionsData = [];
+        let selectedRoundId = null;
+        let activeAssignIds = new Set();
+        let auctionState = {};
+        let liveBidsUnsub = null;
+        let countdownInterval = null;
+
+        function logoutOwner() {
+            localStorage.removeItem('auction-isLoggedIn');
+            localStorage.removeItem('auction-role');
+            window.location.href = 'index.html';
+        }
+
+        function showTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('bg-blue-50/80', 'text-[#134e8e]', 'font-bold');
+                b.classList.add('text-brand-textMuted', 'hover:bg-gray-50', 'hover:text-brand-textDark');
+                const iw = b.querySelector('.icon-wrap');
+                if (iw) {
+                    iw.classList.remove('bg-white', 'shadow-sm', 'text-[#134e8e]');
+                    iw.classList.add('bg-transparent', 'text-gray-400');
+                }
+            });
+
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+            const activeBtn = document.getElementById('btn-' + tab);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-brand-textMuted', 'hover:bg-gray-50', 'hover:text-brand-textDark');
+                activeBtn.classList.add('bg-blue-50/80', 'text-[#134e8e]', 'font-bold');
+                const iw = activeBtn.querySelector('.icon-wrap');
+                if (iw) {
+                    iw.classList.remove('bg-transparent', 'text-gray-400');
+                    iw.classList.add('bg-white', 'shadow-sm', 'text-[#134e8e]');
+                }
+            }
+
+            document.getElementById('page-title').innerText = tab.replace('-', ' ') + ' Control';
+        }
+
+        // Real-Time Listeners for database collections
+        function initDataListeners() {
+            // 1. Teams
+            db.collection('teams').onSnapshot(snap => {
+                teamsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderTeamsUI();
+                renderDashboardUI();
+            });
+
+            // 2. Candidates/Players
+            db.collection('candidates').onSnapshot(snap => {
+                candidatesData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderPlayersUI();
+                renderAssignPlayersUI();
+                renderDashboardUI();
+                renderLivePlayerSelect();
+            });
+
+            // 3. Rounds
+            db.collection('auctionRounds').orderBy('order', 'asc').onSnapshot(snap => {
+                roundsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderRoundsUI();
+                
+                // Populate round selects
+                const initRound = document.getElementById('initiate-auction-round');
+                if (initRound) {
+                    initRound.innerHTML = '<option value="">Select Round (Set)</option>' + 
+                        roundsData.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+                }
+            });
+
+            // 4. Sections
+            db.collection('sections').where('isActive', '==', true).onSnapshot(snap => {
+                sectionsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Populate section selects
+                const selectors = ['filter-player-section', 'filter-assign-section', 'select-live-section'];
+                selectors.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.innerHTML = `<option value="">All Sections</option>` + 
+                            sectionsData.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+                    }
+                });
+
+                const initSelect = document.getElementById('initiate-auction-section');
+                if (initSelect) {
+                    initSelect.innerHTML = `<option value="">Select Section to Start</option>` + 
+                        sectionsData.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+                }
+            });
+
+            // 5. Auction State
+            db.collection('config').doc('auctionState').onSnapshot(doc => {
+                if (doc.exists) {
+                    auctionState = doc.data();
+                    updateLivePanelUI();
+                } else {
+                    // Create default
+                    const def = { status: 'idle', currentPlayerId: '', timerEnd: null, bidTimerDuration: 120 };
+                    db.collection('config').doc('auctionState').set(def);
+                }
+            });
+        }
+
+        // Dashboard renders
+        function renderDashboardUI() {
+            document.getElementById('stats-total-players').innerText = candidatesData.length;
+            const soldCount = candidatesData.filter(c => c.status === 'sold').length;
+            document.getElementById('stats-sold-players').innerText = soldCount;
+            document.getElementById('stats-unsold-players').innerText = candidatesData.filter(c => c.status === 'unsold').length;
+
+            const teamsTable = document.getElementById('dashboard-teams-table');
+            if (teamsTable) {
+                teamsTable.innerHTML = teamsData.map(team => {
+                    const roster = candidatesData.filter(c => c.team === team.name && c.status === 'sold');
+                    return `
+                        <tr class="border-b border-theme hover:bg-gray-50/50">
+                            <td class="py-3 px-4 font-bold flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full" style="background-color: ${team.color || '#ccc'}"></span>
+                                ${team.name}
+                            </td>
+                            <td class="py-3 px-4 font-bold text-right">${roster.length} candidates</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Manage Team Purses
+        function renderTeamsUI() {
+            const container = document.getElementById('teams-table-body');
+            if (container) {
+                container.innerHTML = teamsData.map(team => {
+                    return `
+                        <tr class="border-b border-theme hover:bg-gray-50/50">
+                            <td class="py-3 px-4 font-bold">${team.name}</td>
+                            <td class="py-3 px-4 text-right">
+                                <span class="w-6 h-6 rounded-full inline-block border border-theme" style="background-color: ${team.color || '#fff'}"></span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Manage Players basePrice/category/round assignment
+        function renderPlayerRegUI() {
+            const search = document.getElementById('search-player-reg').value.toLowerCase().trim();
+            const section = document.getElementById('filter-player-section').value;
+            const container = document.getElementById('players-table-body');
+
+            if (!container) return;
+
+            let filtered = candidatesData;
+            if (search) {
+                filtered = filtered.filter(c => c.name.toLowerCase().includes(search));
+            }
+            if (section) {
+                filtered = filtered.filter(c => c.section === section);
+            }
+
+            container.innerHTML = filtered.map(cand => {
+                const basePrice = cand.basePrice || 1000;
+                const category = cand.category || 'Category A';
+                const statusBadge = cand.status === 'sold' ? '<span class="badge badge-sold">Sold</span>' :
+                                    cand.status === 'live' ? '<span class="badge badge-live">Live</span>' :
+                                    cand.status === 'unsold' ? '<span class="badge badge-unsold">Unsold</span>' :
+                                    '<span class="badge badge-available">Available</span>';
+
+                // Dropdown of rounds
+                let roundsOptions = `<option value="">No Round Assigned</option>`;
+                roundsData.forEach(r => {
+                    roundsOptions += `<option value="${r.id}" ${cand.auctionRoundId === r.id ? 'selected' : ''}>${r.name}</option>`;
+                });
+
+                return `
+                    <tr class="border-b border-theme hover:bg-gray-50/50">
+                        <td class="py-3 px-4 font-mono font-bold">#${cand.chestNo}</td>
+                        <td class="py-3 px-4 font-bold">
+                            <div class="flex items-center gap-2">
+                                ${cand.name}
+                                ${statusBadge}
+                            </div>
+                        </td>
+                        <td class="py-3 px-4 text-xs font-semibold text-gray-500">${cand.section}</td>
+                        <td class="py-3 px-4">
+                            <input type="text" id="cat-${cand.id}" value="${category}" class="input-flat py-1 px-2 text-xs w-28">
+                        </td>
+                        <td class="py-3 px-4">
+                            <input type="number" id="base-${cand.id}" value="${basePrice}" class="input-flat py-1 px-2 text-xs w-24 font-mono">
+                        </td>
+                        <td class="py-3 px-4">
+                            <select id="round-${cand.id}" class="input-flat py-1 px-2 text-xs w-44">
+                                ${roundsOptions}
+                            </select>
+                        </td>
+                        <td class="py-3 px-4 text-right">
+                            <button onclick="updatePlayerInfo('${cand.id}')" class="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-bold shadow-sm hover:opacity-90">Save</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updatePlayerInfo(candId) {
+            const category = document.getElementById('cat-' + candId).value.trim();
+            const basePrice = parseInt(document.getElementById('base-' + candId).value) || 0;
+            const roundId = document.getElementById('round-' + candId).value;
+
+            db.collection('candidates').doc(candId).update({
+                category,
+                basePrice,
+                auctionRoundId: roundId
+            }).then(() => {
+                showAuctionToast("Player metadata saved!");
+            });
+        }
+
+        // Manage rounds & sequence builder
+        let sequenceTeamOrder = [];
+
+        function setPresetOrder(preset) {
+            const container = document.getElementById('custom-teams-builder-pool');
+            if (preset === 'ABCD') {
+                container.classList.add('hidden');
+                sequenceTeamOrder = teamsData.map(t => t.name).sort((a, b) => a.localeCompare(b));
+            } else if (preset === 'DCBA') {
+                container.classList.add('hidden');
+                sequenceTeamOrder = teamsData.map(t => t.name).sort((a, b) => b.localeCompare(a));
+            } else if (preset === 'Custom') {
+                container.classList.remove('hidden');
+                renderCustomTeamsPool();
+            }
+            renderSequencePreview();
+        }
+
+        function renderCustomTeamsPool() {
+            const container = document.getElementById('custom-teams-builder-pool');
+            if (!container) return;
+            container.innerHTML = teamsData.map(team => `
+                <button type="button" onclick="selectTeamForCustom('${team.name}')" class="px-2 py-1 bg-white hover:bg-gray-100 border border-theme text-xs font-bold text-gray-700 rounded-lg transition-all">
+                    + ${team.name}
+                </button>
+            `).join('');
+        }
+
+        function selectTeamForCustom(teamName) {
+            sequenceTeamOrder.push(teamName);
+            renderSequencePreview();
+        }
+
+        function clearSequenceBuilder() {
+            sequenceTeamOrder = [];
+            renderSequencePreview();
+        }
+
+        function renderSequencePreview() {
+            const container = document.getElementById('sequence-preview-container');
+            if (!container) return;
+            if (sequenceTeamOrder.length === 0) {
+                container.innerHTML = `<span class="text-xs text-gray-400">Sequence is empty. Click presets or custom to add teams.</span>`;
+            } else {
+                container.innerHTML = sequenceTeamOrder.map((team, idx) => `
+                    <span class="flex items-center gap-1">
+                        <span class="px-2.5 py-1 bg-blue-50 text-[#134e8e] border border-blue-100 text-xs font-extrabold rounded-lg">${team}</span>
+                        ${idx < sequenceTeamOrder.length - 1 ? '<span class="text-gray-400 text-xs">➔</span>' : ''}
+                    </span>
+                `).join('');
+            }
+        }
+
+        function saveRound(e) {
+            e.preventDefault();
+            const name = document.getElementById('round-name').value.trim();
+            const order = parseInt(document.getElementById('round-order').value) || 1;
+
+            if (sequenceTeamOrder.length === 0) {
+                return showAuctionToast("Please set a team sequence for this round/set first!", false);
+            }
+
+            db.collection('auctionRounds').add({ 
+                name, 
+                order, 
+                teamOrder: sequenceTeamOrder 
+            }).then(() => {
+                document.getElementById('round-name').value = '';
+                sequenceTeamOrder = [];
+                renderSequencePreview();
+                document.getElementById('custom-teams-builder-pool').classList.add('hidden');
+                showAuctionToast("Round created successfully!");
+            });
+        }
+
+        function renderRoundsUI() {
+            const container = document.getElementById('rounds-list-container');
+            if (container) {
+                container.innerHTML = roundsData.map(r => {
+                    const orderText = r.teamOrder ? r.teamOrder.join(' ➔ ') : 'No sequence set';
+                    return `
+                    <div class="flex flex-col p-3 rounded-lg border border-theme bg-theme-sec hover:border-gray-300 cursor-pointer ${selectedRoundId === r.id ? 'border-blue-400 bg-blue-50/20' : ''}" onclick="selectRound('${r.id}')">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-gray-700">${r.name}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-mono">Order: ${r.order}</span>
+                                <button onclick="deleteRound('${r.id}', event)" class="text-red-500 hover:text-red-700 p-1"><i class="fi fi-rr-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="text-[10px] font-mono font-bold text-blue-600 mt-1 truncate">${orderText}</div>
+                    </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function selectRound(roundId) {
+            selectedRoundId = roundId;
+            renderRoundsUI();
+            const round = roundsData.find(r => r.id === roundId);
+            if (round) {
+                document.getElementById('assign-round-title').innerText = `Round Assignment: ${round.name}`;
+            }
+            renderAssignPlayersUI();
+        }
+
+        function deleteRound(roundId, e) {
+            e.stopPropagation();
+            if (confirm("Delete this round? Players will be unassigned.")) {
+                db.collection('auctionRounds').doc(roundId).delete().then(() => {
+                    if (selectedRoundId === roundId) {
+                        selectedRoundId = null;
+                        document.getElementById('assign-round-title').innerText = "Round Assignment";
+                    }
+                    showAuctionToast("Round deleted.");
+                });
+            }
+        }
+
+        // Round assignment UI checklist
+        function renderAssignPlayersUI() {
+            const container = document.getElementById('assign-players-table-body');
+            const section = document.getElementById('filter-assign-section').value;
+            if (!container) return;
+
+            let filtered = candidatesData;
+            if (section) {
+                filtered = filtered.filter(c => c.section === section);
+            }
+
+            container.innerHTML = filtered.map(cand => {
+                const isChecked = activeAssignIds.has(cand.id);
+                const assignedRound = roundsData.find(r => r.id === cand.auctionRoundId);
+                const roundText = assignedRound ? `<span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">${assignedRound.name}</span>` : '<span class="text-xs text-gray-400">Unassigned</span>';
+
+                return `
+                    <tr class="border-b border-theme hover:bg-gray-50/50">
+                        <td class="py-2 px-4">
+                            <input type="checkbox" class="cand-assign-check" value="${cand.id}" ${isChecked ? 'checked' : ''} onchange="toggleAssignCheck('${cand.id}', this.checked)">
+                        </td>
+                        <td class="py-2 px-4 font-mono text-xs font-bold">#${cand.chestNo}</td>
+                        <td class="py-2 px-4 font-bold text-xs">${cand.name}</td>
+                        <td class="py-2 px-4 text-xs font-semibold text-gray-400">${cand.section}</td>
+                        <td class="py-2 px-4">${roundText}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleAssignCheck(id, checked) {
+            if (checked) activeAssignIds.add(id);
+            else activeAssignIds.delete(id);
+            document.getElementById('selected-assign-count').innerText = `${activeAssignIds.size} selected`;
+        }
+
+        function toggleAllAssign(checked) {
+            const checks = document.querySelectorAll('.cand-assign-check');
+            checks.forEach(c => {
+                c.checked = checked;
+                toggleAssignCheck(c.value, checked);
+            });
+        }
+
+        function assignCheckedPlayers() {
+            if (!selectedRoundId) {
+                return showAuctionToast("Please select a target round from the left panel first!", false);
+            }
+            if (activeAssignIds.size === 0) {
+                return showAuctionToast("No candidates selected to assign!", false);
+            }
+
+            const batch = db.batch();
+            activeAssignIds.forEach(id => {
+                const ref = db.collection('candidates').doc(id);
+                batch.update(ref, { auctionRoundId: selectedRoundId });
+            });
+
+            batch.commit().then(() => {
+                activeAssignIds.clear();
+                document.getElementById('selected-assign-count').innerText = "0 selected";
+                document.getElementById('master-assign-checkbox').checked = false;
+                showAuctionToast("Candidates successfully assigned to round!");
+            });
+        }
+
+        // Live Selection Setup & Control Panel
+        function renderLivePlayerSelect() {
+            const sectionFilter = auctionState.activeSection;
+            const searchQuery = document.getElementById('search-live-players') ? document.getElementById('search-live-players').value.toLowerCase().trim() : '';
+            const container = document.getElementById('live-player-select-table');
+
+            if (!container) return;
+
+            let filtered = [...candidatesData];
+
+            if (sectionFilter) {
+                filtered = filtered.filter(c => c.section === sectionFilter);
+            }
+            if (searchQuery) {
+                filtered = filtered.filter(c => c.name.toLowerCase().includes(searchQuery));
+            }
+
+            container.innerHTML = filtered.map(cand => {
+                let statusText = '';
+
+                if (cand.status === 'sold') {
+                    statusText = `<span class="badge bg-red-100 text-red-700 font-extrabold px-3 py-1 rounded-full text-xs">🔒 Selected (${cand.team})</span>`;
+                } else {
+                    statusText = `<span class="badge bg-green-100 text-green-700 font-extrabold px-3 py-1 rounded-full text-xs">✅ Available</span>`;
+                }
+
+                return `
+                    <tr class="border-b border-theme hover:bg-gray-50/50 ${cand.status === 'sold' ? 'opacity-60 bg-gray-50/20' : ''}">
+                        <td class="py-2.5 px-4 font-mono font-bold text-xs">#${cand.chestNo}</td>
+                        <td class="py-2.5 px-4 font-bold text-xs">
+                            <div class="flex items-center gap-2">
+                                <span>${cand.name}</span>
+                            </div>
+                        </td>
+                        <td class="py-2.5 px-4 text-xs font-semibold text-gray-500">${cand.section}</td>
+                        <td class="py-2.5 px-4 text-right">${statusText}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function startDraftSession() {
+            const sec = document.getElementById('initiate-auction-section').value;
+            const roundId = document.getElementById('initiate-auction-round').value;
+            if (!sec) {
+                return showAuctionToast("Please select a section to initiate!", false);
+            }
+            if (!roundId) {
+                return showAuctionToast("Please select a round (set) to initiate!", false);
+            }
+
+            const targetRound = roundsData.find(r => r.id === roundId);
+            if (!targetRound) return;
+
+            const durationSec = parseInt(document.getElementById('initiate-auction-duration').value) || 120;
+            const timerEnd = new Date(Date.now() + durationSec * 1000);
+
+            // Default to all team names sorted alphabetically if round has no team order
+            const defaultOrder = teamsData.map(t => t.name).sort((a,b) => a.localeCompare(b));
+            const roundQueue = targetRound.teamOrder || defaultOrder;
+
+            db.collection('config').doc('auctionState').update({
+                activeSection: sec,
+                activeRoundId: roundId,
+                activeRoundName: targetRound.name,
+                currentPlayerId: '',
+                status: 'started',
+                perTeamDuration: durationSec,
+                turnQueue: roundQueue,
+                currentTurnIndex: 0,
+                timerEnd: firebase.firestore.Timestamp.fromDate(timerEnd),
+                lastSelectedCandId: '',
+                lastSelectedTeam: ''
+            }).then(() => {
+                showAuctionToast(`Draft Session started for Section: ${sec}, Round: ${targetRound.name}!`);
+            });
+        }
+
+        function endDraftSession() {
+            if (confirm("Are you sure you want to stop the draft session?")) {
+                db.collection('config').doc('auctionState').update({
+                    activeSection: '',
+                    activeRoundId: '',
+                    activeRoundName: '',
+                    currentPlayerId: '',
+                    timerEnd: null,
+                    status: 'idle',
+                    turnQueue: [],
+                    currentTurnIndex: 0,
+                    lastSelectedCandId: '',
+                    lastSelectedTeam: ''
+                }).then(() => {
+                    showAuctionToast("Draft session stopped.");
+                });
+            }
+        }
+
+        function resetDraftSession() {
+            const sec = document.getElementById('initiate-auction-section').value;
+            if (!sec) {
+                return showAuctionToast("Please select a section to reset!", false);
+            }
+
+            if (confirm(`Are you sure you want to RESET/ARCHIVE Section ${sec}?\n\nThis will clear all selected/drafted teams and restore all students in Section ${sec} to Available.`)) {
+                db.collection('candidates')
+                    .where('section', '==', sec)
+                    .where('status', '==', 'sold')
+                    .get()
+                    .then(snap => {
+                        if (snap.empty) {
+                            showAuctionToast("No drafted candidates to reset in this section.");
+                            return;
+                        }
+                        const batch = db.batch();
+                        snap.forEach(doc => {
+                            batch.update(doc.ref, {
+                                status: 'available',
+                                team: '',
+                                bidPrice: 0,
+                                draftedInRound: '',
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        });
+                        batch.commit().then(() => {
+                            showAuctionToast(`Section ${sec} reset successfully!`);
+                        });
+                    });
+            }
+        }
+
+        function updateLivePanelUI() {
+            const bar = document.getElementById('active-auction-status-bar');
+            const lbl = document.getElementById('lbl-active-section');
+            const lblRound = document.getElementById('lbl-active-round');
+            if (bar && lbl && lblRound) {
+                if (auctionState.activeSection) {
+                    bar.classList.remove('hidden');
+                    lbl.innerText = auctionState.activeSection;
+                    lblRound.innerText = auctionState.activeRoundName || 'N/A';
+                } else {
+                    bar.classList.add('hidden');
+                }
+            }
+
+            const activeTeam = (auctionState.turnQueue && auctionState.turnQueue.length > 0) 
+                ? auctionState.turnQueue[auctionState.currentTurnIndex || 0] 
+                : 'None';
+            
+            const teamTurnEl = document.getElementById('lbl-current-team-turn');
+            if (teamTurnEl) {
+                teamTurnEl.innerText = activeTeam;
+            }
+
+            renderLivePlayerSelect();
+            handleCountdownClock();
+        }
+
+        function handleCountdownClock() {
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            if (!auctionState.timerEnd || auctionState.status !== 'started') {
+                document.getElementById('auction-timer-display').innerText = "--";
+                return;
+            }
+
+            const endTime = auctionState.timerEnd.toDate().getTime();
+
+            countdownInterval = setInterval(() => {
+                const now = Date.now();
+                const diff = Math.ceil((endTime - now) / 1000);
+
+                if (diff <= 0) {
+                    clearInterval(countdownInterval);
+                    document.getElementById('auction-timer-display').innerText = "TIME OUT";
+                    
+                    // Time out! Automatically advance turn to the next team
+                    advanceTurnOnTimeout();
+                } else {
+                    document.getElementById('auction-timer-display').innerText = diff + 's';
+                }
+            }, 1000);
+        }
+
+        function advanceTurnOnTimeout() {
+            if (auctionState.status !== 'started') return;
+            
+            const nextIndex = (auctionState.currentTurnIndex || 0) + 1;
+            const durationSec = auctionState.perTeamDuration || 120;
+            const timerEnd = new Date(Date.now() + durationSec * 1000);
+            
+            if (nextIndex < auctionState.turnQueue.length) {
+                db.collection('config').doc('auctionState').update({
+                    currentTurnIndex: nextIndex,
+                    timerEnd: firebase.firestore.Timestamp.fromDate(timerEnd)
+                }).then(() => {
+                    showAuctionToast("Time out! Turn passed to next team.");
+                });
+            } else {
+                db.collection('config').doc('auctionState').update({
+                    status: 'idle',
+                    timerEnd: null,
+                    currentTurnIndex: 0
+                }).then(() => {
+                    showAuctionToast("Draft session finished.");
+                });
+            }
+        }
+
+        // Save configs
+        function saveAuctionSettings(e) {
+            e.preventDefault();
+            const title = document.getElementById('settings-title').value.trim();
+
+            db.collection('config').doc('auctionState').update({
+                title
+            }).then(() => {
+                showAuctionToast("Auction configurations updated!");
+            });
+        }
+
+        // On Load Page
+        document.addEventListener('DOMContentLoaded', () => {
+            initDataListeners();
+            showTab('dashboard');
+
+            // Load Settings UI fallback values
+            db.collection('config').doc('auctionState').get().then(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    document.getElementById('settings-title').value = data.title || "ArtFest '26 Live Player Auction";
+                }
+            });
+        });
+    </script>
+</body>
+</html>

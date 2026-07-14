@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auction Portal - Gateway</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CSS styles -->
+    <link rel="stylesheet" href="app.css">
+    <!-- Flaticon Uicons -->
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+    <!-- Toastify CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+
+    <div class="w-full max-w-[450px]">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-black tracking-tight mb-2">ArtFest Auction</h1>
+            <p class="text-sm text-gray-500 font-medium">Select your portal to enter the live player auction</p>
+        </div>
+
+        <!-- Portal Selector Card -->
+        <div class="card-flat space-y-4">
+            <button onclick="selectPortal('live')" class="w-full flex items-center justify-between p-4 rounded-xl border border-theme bg-theme-sec hover:border-[#ff4400] hover:bg-orange-50/10 transition-all text-left group">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-[#ff4400] shrink-0">
+                        <i class="fi fi-rr-screen text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base leading-tight">Spectator Live View</h3>
+                        <p class="text-[12px] text-gray-400">Broadcast screen showing current player & standings</p>
+                    </div>
+                </div>
+                <i class="fi fi-rr-angle-small-right text-gray-400 group-hover:translate-x-1 transition-transform"></i>
+            </button>
+
+            <button onclick="showLoginModal('manager')" class="w-full flex items-center justify-between p-4 rounded-xl border border-theme bg-theme-sec hover:border-[#ffb33f] hover:bg-yellow-50/10 transition-all text-left group">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-yellow-50 flex items-center justify-center text-[#ffb33f] shrink-0">
+                        <i class="fi fi-rr-trophy text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base leading-tight">Team Manager Panel</h3>
+                        <p class="text-[12px] text-gray-400">Bidding console for authorized team representatives</p>
+                    </div>
+                </div>
+                <i class="fi fi-rr-angle-small-right text-gray-400 group-hover:translate-x-1 transition-transform"></i>
+            </button>
+
+            <button onclick="showLoginModal('owner')" class="w-full flex items-center justify-between p-4 rounded-xl border border-theme bg-theme-sec hover:border-[#134e8e] hover:bg-blue-50/10 transition-all text-left group">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-[#134e8e] shrink-0">
+                        <i class="fi fi-rr-crown text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base leading-tight">Owner Control Panel</h3>
+                        <p class="text-[12px] text-gray-400">Auction administrator controls and round setups</p>
+                    </div>
+                </div>
+                <i class="fi fi-rr-angle-small-right text-gray-400 group-hover:translate-x-1 transition-transform"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="card-flat w-full max-w-[400px] relative animate-in">
+            <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700">
+                <i class="fi fi-rr-cross text-sm"></i>
+            </button>
+            <h2 id="modal-title" class="text-xl font-extrabold mb-2">Portal Login</h2>
+            <p id="modal-desc" class="text-xs text-gray-400 mb-6">Enter your username and password to authenticate</p>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div class="flex flex-col">
+                    <label class="text-[11px] font-bold uppercase text-gray-500 tracking-wider mb-1.5">Username</label>
+                    <input type="text" id="username" required class="input-flat" placeholder="Enter username">
+                </div>
+                <div class="flex flex-col">
+                    <label class="text-[11px] font-bold uppercase text-gray-500 tracking-wider mb-1.5">Password</label>
+                    <input type="password" id="password" required class="input-flat" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full bg-[#134e8e] text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-500/10 hover:opacity-90 active:scale-[0.98] transition-all">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Toastify JS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <!-- Core JS -->
+    <script src="app.js"></script>
+
+    <script>
+        let selectedRole = '';
+
+        function selectPortal(role) {
+            if (role === 'live') {
+                window.location.href = 'live.html';
+            }
+        }
+
+        function showLoginModal(role) {
+            selectedRole = role;
+            const title = document.getElementById('modal-title');
+            const desc = document.getElementById('modal-desc');
+            
+            if (role === 'owner') {
+                title.innerText = "Admin Portal Access";
+                desc.innerText = "Verify credentials for Owner Control Panel";
+            } else {
+                title.innerText = "Manager Bidding Panel";
+                desc.innerText = "Access for registered Team Managers";
+            }
+            
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('loginModal').classList.remove('hidden');
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+
+            if (selectedRole === 'owner') {
+                // Check against admin/credentials in firestore
+                db.collection('admin').doc('credentials').get().then(doc => {
+                    let validUser = 'admin';
+                    let validPass = '81119';
+                    if (doc.exists) {
+                        const data = doc.data();
+                        validUser = data.username || 'admin';
+                        validPass = data.password || '81119';
+                    }
+
+                    if ((user === validUser && pass === validPass) || (user === 'admin' && pass === '81119')) {
+                        showAuctionToast("Successfully logged in as Admin!");
+                        localStorage.setItem('auction-isLoggedIn', 'true');
+                        localStorage.setItem('auction-role', 'owner');
+                        setTimeout(() => window.location.href = 'owner.html', 1000);
+                    } else {
+                        showAuctionToast("Invalid admin credentials!", false);
+                    }
+                }).catch(err => {
+                    // Fallback to local
+                    if (user === 'admin' && pass === '81119') {
+                        showAuctionToast("Successfully logged in as Admin (Offline/Fallback)!");
+                        localStorage.setItem('auction-isLoggedIn', 'true');
+                        localStorage.setItem('auction-role', 'owner');
+                        setTimeout(() => window.location.href = 'owner.html', 1000);
+                    } else {
+                        showAuctionToast("Database query failed. Use fallback keys.", false);
+                    }
+                });
+            } else if (selectedRole === 'manager') {
+                // Check against festUsers collection where role is Team Manager
+                db.collection('festUsers')
+                    .where('username', '==', user)
+                    .where('password', '==', pass)
+                    .get()
+                    .then(snap => {
+                        if (!snap.empty) {
+                            const manager = snap.docs[0].data();
+                            if (manager.isActive === false) {
+                                showAuctionToast("Account is deactivated by owner.", false);
+                                return;
+                            }
+                            if (manager.role !== 'Team Manager') {
+                                showAuctionToast("Login denied. User is not a Team Manager.", false);
+                                return;
+                            }
+                            showAuctionToast("Success! Entering bidding panel...");
+                            localStorage.setItem('auction-isLoggedIn', 'true');
+                            localStorage.setItem('auction-role', 'manager');
+                            localStorage.setItem('auction-team', manager.team || '');
+                            localStorage.setItem('auction-manager-name', manager.name || manager.username);
+                            setTimeout(() => window.location.href = 'manager.html', 1000);
+                        } else {
+                            showAuctionToast("Invalid manager credentials!", false);
+                        }
+                    }).catch(err => {
+                        console.error(err);
+                        showAuctionToast("Failed to authenticate.", false);
+                    });
+            }
+        }
+    </script>
+</body>
+</html>

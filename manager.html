@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bidding Console - Team Manager</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CSS styles -->
+    <link class="border-theme" rel="stylesheet" href="app.css">
+    <!-- Flaticon Uicons -->
+    <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css'>
+    <!-- Toastify CSS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+</head>
+<body class="min-h-screen flex flex-col bg-[#f8f9fc]">
+    <!-- Manager Guard Check -->
+    <script>
+        const managerTeamName = localStorage.getItem('auction-team');
+        if (localStorage.getItem('auction-role') !== 'manager' || localStorage.getItem('auction-isLoggedIn') !== 'true' || !managerTeamName) {
+            window.location.href = 'index.html';
+        }
+    </script>
+
+    <!-- Header bar -->
+    <header class="h-16 border-b border-theme bg-theme-sec px-8 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-yellow-50 flex items-center justify-center text-yellow-600">
+                <i class="fi fi-rr-trophy text-lg"></i>
+            </div>
+            <div>
+                <h2 id="manager-team-title" class="font-black text-sm leading-tight">Team Manager</h2>
+                <span id="manager-name-display" class="text-[10px] uppercase font-bold text-gray-400">Loading...</span>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+
+            <button onclick="logoutManager()" class="px-4 py-2 border border-red-200 text-red-500 rounded-xl text-xs font-bold hover:bg-red-50 transition-all">
+                Log Out
+            </button>
+        </div>
+    </header>
+
+    <!-- Content grid -->
+    <div class="p-8 max-w-[1400px] w-full mx-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Panel: Live Auction bidding arena -->
+        <div class="lg:col-span-12 space-y-6">
+            
+            <!-- Active Section Notification Banner & Turn Queue -->
+            <div id="active-section-banner" class="hidden space-y-4">
+                <div class="p-5 rounded-2xl border border-blue-100 bg-blue-50/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="w-3 h-3 rounded-full bg-blue-500 animate-pulse shrink-0"></span>
+                        <div>
+                            <h3 class="text-base font-black text-blue-900">Drafting Session: Section <span id="lbl-active-section" class="underline">None</span> | Round <span id="lbl-active-round" class="underline">None</span></h3>
+                            <p id="lbl-prominent-turn-status" class="text-xs font-bold text-gray-500 mt-0.5">Determining turn order...</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 bg-white px-4 py-2 border border-theme rounded-xl self-start md:self-auto shrink-0">
+                        <span class="text-xs font-bold text-gray-400">Time Remaining:</span>
+                        <span id="auction-timer-display" class="font-mono text-xl font-black text-red-500">--</span>
+                    </div>
+                </div>
+                
+                <!-- Visual Turn Queue Grid -->
+                <div class="card-flat">
+                    <h4 class="text-xs font-extrabold text-gray-400 uppercase tracking-widest">Draft Round Selection Sets</h4>
+                    <div id="turn-queue-grid-container">
+                        <!-- Populated by script -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auction Pool Selector -->
+            <div class="card-flat space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <h3 class="font-black text-base">Auction Pool</h3>
+                    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <input type="text" id="search-pool-players" oninput="renderPoolTable()" class="input-flat text-xs w-full sm:w-60" placeholder="Search candidate name or chest no...">
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto max-h-[300px]">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-theme text-gray-400 font-semibold text-[11px] uppercase">
+                                <th class="py-2.5 px-4">Chest</th>
+                                <th class="py-2.5 px-4">Name</th>
+                                <th class="py-2.5 px-4">Section</th>
+                                <th class="py-2.5 px-4 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pool-table-body">
+                            <!-- Dynamic pool rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Drafted Roster Panel -->
+            <div class="card-flat space-y-4">
+                <h3 class="font-black text-base">Drafted Candidates Roster</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-theme text-gray-400 font-semibold text-[11px] uppercase">
+                                <th class="py-2.5 px-4">Chest No</th>
+                                <th class="py-2.5 px-4">Name</th>
+                                <th class="py-2.5 px-4">Section</th>
+                                <th class="py-2.5 px-4 text-right">Category</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchased-roster-table">
+                            <!-- Dynamic roster rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+    </div>
+
+    <!-- Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Toastify JS -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <!-- Core JS -->
+    <script src="app.js"></script>
+
+    <!-- Manager JS Console -->
+    <script>
+        const managerTeam = localStorage.getItem('auction-team');
+        const managerName = localStorage.getItem('auction-manager-name');
+        
+        let teamData = null;
+        let candidatesData = [];
+        let roundsData = [];
+        let sectionsData = [];
+        let auctionState = {};
+        let countdownInterval = null;
+        let liveBidsUnsub = null;
+
+        function logoutManager() {
+            localStorage.removeItem('auction-isLoggedIn');
+            localStorage.removeItem('auction-role');
+            localStorage.removeItem('auction-team');
+            localStorage.removeItem('auction-manager-name');
+            window.location.href = 'index.html';
+        }
+
+        // Initialize user details
+        document.getElementById('manager-team-title').innerText = `${managerTeam} Manager`;
+        document.getElementById('manager-name-display').innerText = `Logged in as: ${managerName}`;
+
+        function initDataSync() {
+            // 1. Sync Manager's Team info
+            db.collection('teams').where('name', '==', managerTeam).limit(1).onSnapshot(snap => {
+                if (!snap.empty) {
+                    teamData = { id: snap.docs[0].id, ...snap.docs[0].data() };
+                }
+            });
+
+            // 2. Sync all candidates
+            db.collection('candidates').onSnapshot(snap => {
+                candidatesData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderRosterUI();
+                syncBiddingArena();
+                renderPoolTable();
+            });
+
+            // 3. Sync live auctionState config
+            db.collection('config').doc('auctionState').onSnapshot(doc => {
+                if (doc.exists) {
+                    auctionState = doc.data();
+                    syncBiddingArena();
+                    renderPoolTable();
+                }
+            });
+
+            // 4. Sync rounds
+            db.collection('auctionRounds').orderBy('order', 'asc').onSnapshot(snap => {
+                roundsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderPoolTable();
+            });
+
+            // 5. Sync sections
+            db.collection('sections').where('isActive', '==', true).onSnapshot(snap => {
+                sectionsData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderPoolTable();
+            });
+        }
+
+        function renderRosterUI() {
+            const myRoster = candidatesData.filter(c => c.team === managerTeam && c.status === 'sold');
+            const container = document.getElementById('purchased-roster-table');
+            if (container) {
+                if (myRoster.length === 0) {
+                    container.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-gray-400 text-xs">No candidates drafted yet.</td></tr>`;
+                } else {
+                    container.innerHTML = myRoster.map(cand => `
+                        <tr class="border-b border-theme hover:bg-gray-50/50">
+                            <td class="py-2 px-4 font-mono font-bold text-xs">#${cand.chestNo}</td>
+                            <td class="py-2.5 px-4 font-bold text-xs">${cand.name}</td>
+                            <td class="py-2.5 px-4 text-xs font-semibold text-gray-500">${cand.section}</td>
+                            <td class="py-2.5 px-4 text-xs font-semibold text-gray-500 text-right">${cand.category || 'Category A'}</td>
+                        </tr>
+                    `).join('');
+                }
+            }
+        }
+
+        function syncBiddingArena() {
+            const banner = document.getElementById('active-section-banner');
+            const lbl = document.getElementById('lbl-active-section');
+            const lblRound = document.getElementById('lbl-active-round');
+            const prominentStatus = document.getElementById('lbl-prominent-turn-status');
+
+            if (banner && lbl && lblRound && prominentStatus) {
+                if (auctionState.status === 'started' && auctionState.activeSection) {
+                    banner.classList.remove('hidden');
+                    lbl.innerText = auctionState.activeSection;
+                    lblRound.innerText = auctionState.activeRoundName || 'N/A';
+
+                    const activeTeam = (auctionState.turnQueue && auctionState.turnQueue.length > 0)
+                        ? auctionState.turnQueue[auctionState.currentTurnIndex || 0]
+                        : '';
+
+                    if (activeTeam === managerTeam) {
+                        prominentStatus.innerHTML = `<span class="text-blue-600 font-extrabold animate-pulse">🔴 IT IS YOUR TURN! Select a candidate from the pool below.</span>`;
+                    } else if (activeTeam) {
+                        prominentStatus.innerText = `Awaiting Turn: ${activeTeam}'s turn to select.`;
+                    } else {
+                        prominentStatus.innerText = 'Draft session active.';
+                    }
+                } else {
+                    banner.classList.add('hidden');
+                }
+            }
+
+            renderTurnQueueGrid();
+            handleCountdownClock();
+        }
+
+        function renderTurnQueueGrid() {
+            const container = document.getElementById('turn-queue-grid-container');
+            if (!container) return;
+            if (!auctionState.turnQueue || auctionState.turnQueue.length === 0 || auctionState.status !== 'started') {
+                container.innerHTML = `<div class="text-xs text-gray-400 text-center py-4">No active sets/turns in progress.</div>`;
+                return;
+            }
+
+            const currentTeam = auctionState.turnQueue[auctionState.currentTurnIndex || 0];
+
+            let html = '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">';
+
+            auctionState.turnQueue.forEach((team, index) => {
+                const isActive = (index === (auctionState.currentTurnIndex || 0));
+                const isPassed = (index < (auctionState.currentTurnIndex || 0));
+
+                const selectedCand = candidatesData.find(c => c.team === team && c.draftedInRound === auctionState.activeRoundId);
+
+                let borderClass = 'border-theme bg-white';
+                let statusBadge = '';
+                let candInfo = '<span class="text-xs text-gray-400">Awaiting selection</span>';
+
+                if (isActive) {
+                    borderClass = 'border-blue-500 bg-blue-50/20 shadow-md ring-2 ring-blue-200';
+                    statusBadge = '<span class="px-2 py-0.5 bg-blue-600 text-white font-extrabold text-[9px] uppercase rounded-full animate-pulse">Drafting</span>';
+                    const timerDisplay = document.getElementById('auction-timer-display') ? document.getElementById('auction-timer-display').innerText : '--s';
+                    candInfo = `<span class="text-xs font-bold text-red-500">Remaining time: ${timerDisplay}</span>`;
+                } else if (isPassed) {
+                    borderClass = 'border-theme bg-gray-50/50 opacity-80';
+                    if (selectedCand) {
+                        statusBadge = '<span class="px-2 py-0.5 bg-green-100 text-green-700 font-bold text-[9px] uppercase rounded-full">Drafted</span>';
+                        candInfo = `
+                            <div class="mt-1">
+                                <div class="text-xs font-black text-gray-900">${selectedCand.name}</div>
+                                <div class="text-[9px] font-bold text-gray-400 font-mono">#${selectedCand.chestNo} • ${selectedCand.category || 'Cat'}</div>
+                            </div>
+                        `;
+                    } else {
+                        statusBadge = '<span class="px-2 py-0.5 bg-red-100 text-red-700 font-bold text-[9px] uppercase rounded-full">Passed</span>';
+                        candInfo = '<span class="text-xs text-red-500 font-bold">Passed / Timed Out</span>';
+                    }
+                } else {
+                    statusBadge = '<span class="px-2 py-0.5 bg-gray-100 text-gray-500 font-bold text-[9px] uppercase rounded-full">Awaiting</span>';
+                }
+
+                html += `
+                    <div class="p-4 rounded-xl border ${borderClass} flex flex-col justify-between space-y-2 transition-all">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-extrabold text-sm text-gray-800">${team}</h4>
+                            ${statusBadge}
+                        </div>
+                        <div class="pt-2 border-t border-gray-100">
+                            ${candInfo}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function handleCountdownClock() {
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            if (!auctionState.timerEnd || auctionState.status !== 'started') {
+                document.getElementById('auction-timer-display').innerText = "--";
+                return;
+            }
+
+            const endTime = auctionState.timerEnd.toDate().getTime();
+
+            countdownInterval = setInterval(() => {
+                const now = Date.now();
+                const diff = Math.ceil((endTime - now) / 1000);
+
+                if (diff <= 0) {
+                    clearInterval(countdownInterval);
+                    document.getElementById('auction-timer-display').innerText = "TIME OUT";
+                } else {
+                    document.getElementById('auction-timer-display').innerText = diff + 's';
+                }
+                
+                // Update live timer displays in the turn queue grid too
+                const activeTimeLabel = document.querySelector('.text-red-500');
+                if (activeTimeLabel) {
+                    activeTimeLabel.innerText = `Remaining time: ${document.getElementById('auction-timer-display').innerText}`;
+                }
+            }, 1000);
+        }
+
+        function draftCandidate(candId) {
+            if (auctionState.status !== 'started') {
+                return showAuctionToast("No active draft session started!", false);
+            }
+
+            const activeTeam = (auctionState.turnQueue && auctionState.turnQueue.length > 0)
+                ? auctionState.turnQueue[auctionState.currentTurnIndex || 0]
+                : '';
+
+            if (activeTeam !== managerTeam) {
+                return showAuctionToast("It is not your team's turn to draft!", false);
+            }
+
+            const cand = candidatesData.find(c => c.id === candId);
+            if (!cand) return;
+
+            if (cand.status === 'sold') {
+                return showAuctionToast("Candidate is already selected by another team!", false);
+            }
+
+            const candRef = db.collection('candidates').doc(candId);
+            const stateRef = db.collection('config').doc('auctionState');
+
+            db.runTransaction((transaction) => {
+                return transaction.get(candRef).then((candDoc) => {
+                    if (!candDoc.exists) throw "Candidate does not exist!";
+                    const currentCand = candDoc.data();
+                    if (currentCand.status === 'sold') throw "Candidate already selected!";
+
+                    // Update candidate
+                    transaction.update(candRef, {
+                        status: 'sold',
+                        team: managerTeam,
+                        draftedInRound: auctionState.activeRoundId || '',
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    // Advance turn index
+                    const nextIndex = (auctionState.currentTurnIndex || 0) + 1;
+                    if (nextIndex < auctionState.turnQueue.length) {
+                        const durationSec = auctionState.perTeamDuration || 120;
+                        const timerEnd = new Date(Date.now() + durationSec * 1000);
+                        transaction.update(stateRef, {
+                            currentTurnIndex: nextIndex,
+                            lastSelectedCandId: candId,
+                            lastSelectedTeam: managerTeam,
+                            timerEnd: firebase.firestore.Timestamp.fromDate(timerEnd)
+                        });
+                    } else {
+                        transaction.update(stateRef, {
+                            status: 'idle',
+                            timerEnd: null,
+                            currentTurnIndex: 0,
+                            lastSelectedCandId: candId,
+                            lastSelectedTeam: managerTeam
+                        });
+                    }
+                });
+            }).then(() => {
+                showAuctionToast(`Successfully drafted ${cand.name}!`);
+            }).catch((err) => {
+                console.error(err);
+                showAuctionToast(err || "Selection failed.", false);
+            });
+        }
+
+        function renderPoolTable() {
+            const searchQuery = document.getElementById('search-pool-players') ? document.getElementById('search-pool-players').value.toLowerCase().trim() : '';
+            const container = document.getElementById('pool-table-body');
+
+            if (!container) return;
+
+            let filtered = [...candidatesData];
+
+            // Display only students who are Available
+            filtered = filtered.filter(c => c.status !== 'sold');
+
+            // Force filter pool by the currently active session section
+            if (auctionState.activeSection) {
+                filtered = filtered.filter(c => c.section === auctionState.activeSection);
+            }
+
+            if (searchQuery) {
+                filtered = filtered.filter(c => c.name.toLowerCase().includes(searchQuery) || c.chestNo.toString().includes(searchQuery));
+            }
+
+            const activeTeam = (auctionState.turnQueue && auctionState.turnQueue.length > 0)
+                ? auctionState.turnQueue[auctionState.currentTurnIndex || 0]
+                : '';
+
+            const isMyTurn = (auctionState.status === 'started' && activeTeam === managerTeam);
+
+            container.innerHTML = filtered.map(cand => {
+                let statusText = '';
+                
+                if (isMyTurn) {
+                    statusText = `<button onclick="draftCandidate('${cand.id}')" class="px-4 py-1.5 bg-blue-600 text-white rounded-full text-xs font-black hover:bg-blue-700 transition-all shadow-sm">Select</button>`;
+                } else {
+                    statusText = `<span class="badge bg-gray-100 text-gray-500 font-bold px-3 py-1 rounded-full text-xs">✅ Available</span>`;
+                }
+
+                return `
+                    <tr class="border-b border-theme hover:bg-gray-50/50">
+                        <td class="py-2.5 px-4 font-mono font-bold text-xs">#${cand.chestNo}</td>
+                        <td class="py-2.5 px-4 font-bold text-xs">
+                            <div class="flex items-center gap-2">
+                                <span>${cand.name}</span>
+                            </div>
+                        </td>
+                        <td class="py-2.5 px-4 text-xs font-semibold text-gray-500">${cand.section}</td>
+                        <td class="py-2.5 px-4 text-right">${statusText}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // On Load Page
+        document.addEventListener('DOMContentLoaded', () => {
+            initDataSync();
+        });
+    </script>
+</body>
+</html>
