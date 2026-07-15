@@ -59,7 +59,7 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2 bg-white px-4 py-2 border border-theme rounded-xl self-start md:self-auto shrink-0">
-                        <span class="text-xs font-bold text-gray-400">Time Remaining:</span>
+                        <span class="text-xs font-bold text-gray-400">Selection Time:</span>
                         <span id="auction-timer-display" class="font-mono text-xl font-black text-red-500">--</span>
                     </div>
                 </div>
@@ -372,16 +372,32 @@
                     });
 
                     // Advance turn index
-                    const nextIndex = (auctionState.currentTurnIndex || 0) + 1;
-                    if (nextIndex < auctionState.turnQueue.length) {
-                        const durationSec = auctionState.perTeamDuration || 120;
-                        const timerEnd = new Date(Date.now() + durationSec * 1000);
-                        transaction.update(stateRef, {
-                            currentTurnIndex: nextIndex,
-                            lastSelectedCandId: candId,
-                            lastSelectedTeam: managerTeam,
-                            timerEnd: firebase.firestore.Timestamp.fromDate(timerEnd)
-                        });
+                    const remainingPool = candidatesData.filter(c => 
+                        c.status !== 'sold' && 
+                        c.id !== candId && 
+                        c.section === auctionState.activeSection
+                    );
+
+                    const durationSec = auctionState.perTeamDuration || 120;
+                    const timerEnd = new Date(Date.now() + durationSec * 1000);
+
+                    if (remainingPool.length > 0) {
+                        const nextIndex = (auctionState.currentTurnIndex || 0) + 1;
+                        if (nextIndex < auctionState.turnQueue.length) {
+                            transaction.update(stateRef, {
+                                currentTurnIndex: nextIndex,
+                                lastSelectedCandId: candId,
+                                lastSelectedTeam: managerTeam,
+                                timerEnd: firebase.firestore.Timestamp.fromDate(timerEnd)
+                            });
+                        } else {
+                            transaction.update(stateRef, {
+                                currentTurnIndex: 0,
+                                lastSelectedCandId: candId,
+                                lastSelectedTeam: managerTeam,
+                                timerEnd: firebase.firestore.Timestamp.fromDate(timerEnd)
+                            });
+                        }
                     } else {
                         transaction.update(stateRef, {
                             status: 'idle',
