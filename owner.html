@@ -867,6 +867,9 @@
             if (sectionFilter) {
                 filtered = filtered.filter(c => c.section === sectionFilter);
             }
+            if (auctionState.activeRoundId) {
+                filtered = filtered.filter(c => c.auctionRoundId === auctionState.activeRoundId);
+            }
             if (searchQuery) {
                 filtered = filtered.filter(c => c.name.toLowerCase().includes(searchQuery));
             }
@@ -1127,7 +1130,8 @@
             
             const remainingPool = candidatesData.filter(c => 
                 c.status !== 'sold' && 
-                c.section === auctionState.activeSection
+                c.section === auctionState.activeSection &&
+                (!auctionState.activeRoundId || c.auctionRoundId === auctionState.activeRoundId)
             );
 
             if (remainingPool.length > 0) {

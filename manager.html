@@ -259,7 +259,7 @@
                 const isActive = (index === (auctionState.currentTurnIndex || 0));
                 const isPassed = (index < (auctionState.currentTurnIndex || 0));
 
-                const selectedCand = candidatesData.find(c => c.team === team && c.draftedInRound === auctionState.activeRoundId);
+                const draftedCands = candidatesData.filter(c => c.team === team && c.draftedInRound === auctionState.activeRoundId);
 
                 let borderClass = 'border-theme bg-white';
                 let statusBadge = '';
@@ -272,20 +272,30 @@
                     candInfo = `<span class="text-xs font-bold text-red-500">Remaining time: ${timerDisplay}</span>`;
                 } else if (isPassed) {
                     borderClass = 'border-theme bg-gray-50/50 opacity-80';
-                    if (selectedCand) {
+                    if (draftedCands.length > 0) {
                         statusBadge = '<span class="px-2 py-0.5 bg-green-100 text-green-700 font-bold text-[9px] uppercase rounded-full">Drafted</span>';
-                        candInfo = `
-                            <div class="mt-1">
-                                <div class="text-xs font-black text-gray-900">${selectedCand.name}</div>
-                                <div class="text-[9px] font-bold text-gray-400 font-mono">#${selectedCand.chestNo} • ${selectedCand.category || 'Cat'}</div>
-                            </div>
-                        `;
                     } else {
                         statusBadge = '<span class="px-2 py-0.5 bg-red-100 text-red-700 font-bold text-[9px] uppercase rounded-full">Passed</span>';
-                        candInfo = '<span class="text-xs text-red-500 font-bold">Passed / Timed Out</span>';
                     }
                 } else {
                     statusBadge = '<span class="px-2 py-0.5 bg-gray-100 text-gray-500 font-bold text-[9px] uppercase rounded-full">Awaiting</span>';
+                }
+
+                if (draftedCands.length > 0) {
+                    const candsListHtml = draftedCands.map(c => `
+                        <div class="mt-1 pb-1 border-b border-gray-100 last:border-0">
+                            <div class="text-xs font-black text-gray-900">${c.name}</div>
+                            <div class="text-[9px] font-bold text-gray-400 font-mono">#${c.chestNo} • ${c.category || 'Cat'}</div>
+                        </div>
+                    `).join('');
+                    
+                    if (!isActive) {
+                        candInfo = `<div class="mt-1">${candsListHtml}</div>`;
+                    } else {
+                        candInfo += `<div class="mt-2 pt-2 border-t border-dashed border-gray-200">${candsListHtml}</div>`;
+                    }
+                } else if (isPassed && draftedCands.length === 0) {
+                    candInfo = '<span class="text-xs text-red-500 font-bold">Passed / Timed Out</span>';
                 }
 
                 html += `
@@ -375,7 +385,8 @@
                     const remainingPool = candidatesData.filter(c => 
                         c.status !== 'sold' && 
                         c.id !== candId && 
-                        c.section === auctionState.activeSection
+                        c.section === auctionState.activeSection &&
+                        (!auctionState.activeRoundId || c.auctionRoundId === auctionState.activeRoundId)
                     );
 
                     const durationSec = auctionState.perTeamDuration || 120;
@@ -430,6 +441,9 @@
             // Force filter pool by the currently active session section
             if (auctionState.activeSection) {
                 filtered = filtered.filter(c => c.section === auctionState.activeSection);
+            }
+            if (auctionState.activeRoundId) {
+                filtered = filtered.filter(c => c.auctionRoundId === auctionState.activeRoundId);
             }
 
             if (searchQuery) {
